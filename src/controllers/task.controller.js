@@ -3,7 +3,7 @@ const Project = require("../models/project.model");
 
 exports.getAllTasks = async (req, res) => {
   try {
-    const tasks = await Task.find().populate("project", "projectName").populate("assignee", "name email");
+    const tasks = await Task.find().populate("project", "projectName").populate("assignees", "name email");
     res.json(tasks);
   } catch (err) {
     res.status(500).json({ message: err.message });
