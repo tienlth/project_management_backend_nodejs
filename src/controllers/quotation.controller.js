@@ -25,7 +25,13 @@ const getQuotationById = async (req, res) => {
     const { quotationId } = req.params;
 
     const quotation = await Quotation.findById(quotationId)
-      .populate("project")
+      .populate({
+        path: "project",
+        populate: {
+          path: "tasks",
+          model: "tasks"
+        }
+      })
       .populate({
         path: "taskAdditionalCost.taskId",
         select: "title description"
@@ -37,9 +43,10 @@ const getQuotationById = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      data: quotation
+      data: quotation,
     });
   } catch (error) {
+    console.log(error)
     res.status(500).json({ success: false, message: "Lỗi server", error });
   }
 };
@@ -48,27 +55,30 @@ const previewQuotation = async (req, res) => {
   try {
     const projectId = req.params.projectId;
 
-    const project = await Project.findById(projectId);
+    const project = await Project.findById(projectId).populate("tasks");
     if (!project) {
       return res.status(404).json({ message: "Project not found" });
     }
 
     newQuotation = await new Quotation({
-      project,
+      project: project,
       taskAdditionalCost: [],
       additionalCosts: [],
       discounts: [],
       totalCost: 0,
-    }).populate("project");
+    });
 
-    let quotationTasks = (await project.populate("tasks"));
+    let quotationTasks = []
+    await project.tasks.map(async (task)=>{
+      quotationTasks.push(await Task.findById(task).populate("assignees"))
+    })
     
     await newQuotation.calculateTotalCost()
 
     res.status(200).json({
       message: "Get quotation successfully",
       quotation: newQuotation,
-      quotationTasks: quotationTasks["tasks"]
+      quotationTasks: quotationTasks
     });
   } catch (error) {
     console.error(error);
@@ -93,17 +103,14 @@ const createQuotation = async (req, res) => {
       additionalCosts: additionalCosts || [], 
       discounts: discounts || [], 
       totalCost: 0,
-    }).populate("project");
+    });
 
-    let quotationTasks = (await project.populate("tasks"));
-    
     await newQuotation.calculateTotalCost()
 
     await newQuotation.save();
     res.status(200).json({
       message: "Create quotation successfully",
       quotation: newQuotation,
-      quotationTasks: quotationTasks["tasks"]
     });
   } catch (error) {
     console.error(error);

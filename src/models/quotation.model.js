@@ -91,16 +91,4 @@ QuotationSchema.methods.calculateTotalCost = async function() {
   this.totalCost = totalCost;
 };
 
-QuotationSchema.methods.generateQuotation = async function() {
-  await this.calculateTotalCost();
-
-  return {
-    projectId: this.projectId,
-    tasks: this.tasks,
-    additionalCosts: this.additionalCosts,
-    discounts: this.discounts,
-    totalCost: this.totalCost,
-  };
-};
-
 module.exports = mongoose.model("quotations", QuotationSchema);
