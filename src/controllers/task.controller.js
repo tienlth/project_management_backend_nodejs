@@ -1,5 +1,7 @@
 const Task = require("../models/task.model");
 const Project = require("../models/project.model");
+const jwt = require("jsonwebtoken");
+const cloudinary = require("../config/cloudinary");
 
 exports.getAllTasks = async (req, res) => {
   try {
@@ -53,18 +55,27 @@ exports.createTask = async (req, res) => {
 
 exports.updateTask = async (req, res) => {
   try {
-    const { title, description, status, assignee, priority, startDate, endDate } = req.body;
+    const { title, description, status, assignees, priority, startDate, endDate, progress } = req.body;
 
     const task = await Task.findById(req.params.taskId);
     if (!task) return res.status(404).json({ message: "Task not found" });
 
+    if (progress !== undefined && (progress < 0 || progress > 100)) {
+      return res.status(400).json({ message: "Progress must from 0 to 100" });
+    }
+
+    if (status && !["Pending", "In Progress", "Completed"].includes(status)) {
+      return res.status(400).json({ message: "Invalid status" });
+    }
+
     task.title = title || task.title;
     task.description = description || task.description;
     task.status = status || task.status;
-    task.assignee = assignee || task.assignee;
+    task.assignees = assignees || task.assignees;
     task.priority = priority || task.priority;
     task.startDate = startDate || task.startDate;
     task.endDate = endDate || task.endDate;
+    if (progress !== undefined) task.progress = progress;
 
     await task.save();
     res.json({ message: "Task updated successfully", task });
@@ -83,5 +94,139 @@ exports.deleteTask = async (req, res) => {
     res.json({ message: "Task deleted successfully" });
   } catch (err) {
     res.status(500).json({ message: err.message });
+  }
+};
+
+exports.getOverdueTasks = async (req, res) => {
+  try {
+    const now = new Date();
+
+    const overdueTasks = await Task.find({
+      endDate: { $lte: now }, 
+      status: { $ne: "Completed" }
+    }).populate("assignees project");
+
+    res.status(200).json({ success: true, overdueTasks });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Getting data error", error });
+  }
+};
+
+exports.getOverdueTasksSorted = async (req, res) => {
+  try {
+    const now = new Date();
+
+    const overdueTasks = await Task.aggregate([
+      {
+        $match: {
+          status: { $ne: "Completed" },
+          endDate: { $lt: now }
+        }
+      },
+      {
+        $addFields: {
+          overdueTime: { $subtract: [now, "$endDate"] } 
+        }
+      },
+      {
+        $sort: { overdueTime: -1 } 
+      }
+    ]);
+
+    res.status(200).json({ success: true, overdueTasks });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Lỗi khi lấy công việc trễ hạn", error });
+  }
+};
+
+exports.uploadTaskDocument = async (req, res) => {
+  try {
+    const { taskId } = req.params;
+
+    const token = req.headers.authorization?.split(" ")[1];
+    if (!token) return res.status(401).json({ message: "Unauthorized" });
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const userId = decoded.id;
+    
+    const task = await Task.findById(taskId);
+    if (!task) return res.status(404).json({ message: "Task not found" });
+
+    if (!req.file) return res.status(400).json({ message: "No file uploaded" });
+
+    if (req.file.size > 25 * 1024 * 1024) {
+      return res.status(400).json({ message: "File size exceeds 25MB limit" });
+    }
+
+    const fileUrl = req.file.path;
+    const fileName = req.file.originalname;
+
+    task.documents.push({
+      url: fileUrl,
+      name: fileName, 
+      uploadedBy: userId,
+      sharedWith: []
+    });
+
+    await task.save();
+    res.status(200).json({ message: "File uploaded", document: { url: fileUrl, name: fileName } });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ message: "Upload failed", error });
+  }
+};
+
+
+exports.shareTaskDocument = async (req, res) => {
+  try {
+    const { taskId, documentId } = req.params;
+    const { userId } = req.body;
+
+    const task = await Task.findById(taskId);
+    if (!task) return res.status(404).json({ message: "Task not found" });
+
+    const document = task.documents.id(documentId);
+    if (!document) return res.status(404).json({ message: "Document not found" });
+
+    if (!document.sharedWith.includes(userId)) {
+      document.sharedWith.push(userId);
+      await task.save();
+    }
+
+    res.status(200).json({ message: "Document shared successfully" });
+  } catch (error) {
+    res.status(500).json({ message: "Share failed", error });
+  }
+};
+
+exports.deleteTaskDocument = async (req, res) => {
+  try {
+    const { taskId, documentId } = req.params;
+
+    const task = await Task.findById(taskId);
+    if (!task) return res.status(404).json({ message: "Task not found" });
+
+    const docIndex = task.documents.findIndex(doc => doc._id.toString() === documentId);
+    if (docIndex === -1) return res.status(404).json({ message: "Document not found" });
+
+    const fileUrl = task.documents[docIndex].url;
+    const fileExtension = fileUrl.split(".").pop().toLowerCase();
+
+    let resourceType = "raw"; 
+    if (["jpg", "jpeg", "png", "gif"].includes(fileExtension)) {
+      resourceType = "image";
+    } else if (["mp4", "avi", "mov"].includes(fileExtension)) {
+      resourceType = "video";
+    }
+
+    const publicId = fileUrl.split("/").pop().split(".")[0]; 
+
+    await cloudinary.uploader.destroy(`project_documents/${publicId}`, { resource_type: resourceType });
+
+    task.documents.splice(docIndex, 1);
+    await task.save();
+
+    res.status(200).json({ message: "Task document deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ message: "Delete failed", error });
   }
 };
