@@ -37,7 +37,7 @@ exports.createProject = async (req, res) => {
 
 exports.updateProject = async (req, res) => {
   try {
-    const { projectName, description, startDate, endDate, status, progress } = req.body;
+    const { projectName, description, priority, startDate, endDate, status, progress } = req.body;
 
     const project = await Project.findById(req.params.projectId);
     if (!project) return res.status(404).json({ message: "Project not found" });
@@ -55,6 +55,7 @@ exports.updateProject = async (req, res) => {
 
     project.projectName = projectName || project.projectName;
     project.description = description || project.description;
+    project.priority = priority || project.priority;
     project.startDate = startDate || project.startDate;
     project.endDate = endDate || project.endDate;
     project.status = status || project.status;
