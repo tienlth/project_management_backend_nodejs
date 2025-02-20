@@ -3,6 +3,40 @@ const Contract = require("../models/contract.model");
 const Project = require("../models/project.model");
 const Quotation = require("../models/quotation.model");
 
+const getAllContracts = async (req, res) => {
+  try {
+    const contracts = await Contract.find().populate("project quotation");
+    res.status(200).json(contracts);
+  } catch (error) {
+    console.error("Error fetching contracts:", error);
+    res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
+
+const getContractById = async (req, res) => {
+  try {
+    const { contractId } = req.params;
+
+    const contract = await Contract.findById(contractId)
+    .populate("quotation") 
+    .populate({
+      path: "project", 
+      populate: {
+        path: "tasks", 
+      },
+    });;
+
+    if (!contract) {
+      return res.status(404).json({ success: false, message: "Contract not found" });
+    }
+
+    res.status(200).json(contract);
+  } catch (error) {
+    console.error("Error fetching contract:", error);
+    res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
+
 const previewContract = async (req, res) => {
   try {
     const { projectId } = req.params;
@@ -80,6 +114,8 @@ const saveContract = async (req, res) => {
 };
 
 module.exports = {
+  getContractById,
+  getAllContracts,
   previewContract,
   saveContract
 };

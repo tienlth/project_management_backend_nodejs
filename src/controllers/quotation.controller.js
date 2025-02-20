@@ -11,10 +11,7 @@ const getAllQuotations = async (req, res) => {
         select: "title description"
       });
 
-    res.status(200).json({
-      success: true,
-      data: quotations
-    });
+    res.status(200).json(quotations);
   } catch (error) {
     res.status(500).json({ success: false, message: "Lỗi server", error });
   }
@@ -41,10 +38,7 @@ const getQuotationById = async (req, res) => {
       return res.status(404).json({ success: false, message: "Quotation not found" });
     }
 
-    res.status(200).json({
-      success: true,
-      data: quotation,
-    });
+    res.status(200).json(quotation);
   } catch (error) {
     console.log(error)
     res.status(500).json({ success: false, message: "Lỗi server", error });

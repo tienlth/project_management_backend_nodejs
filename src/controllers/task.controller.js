@@ -51,7 +51,7 @@ exports.getAllTasks = async (req, res) => {
 
 exports.getTaskById = async (req, res) => {
   try {
-    const task = await Task.findById(req.params.taskId).populate("project", "projectName description");
+    const task = await Task.findById(req.params.taskId).populate("project", "projectName description").populate("assignees");
 
     if (!task) return res.status(404).json({ message: "Task not found" });
 
@@ -64,11 +64,10 @@ exports.getTaskById = async (req, res) => {
 
 exports.createTask = async (req, res) => {
   try {
-    const { projectId, title, description, assignee, priority, startDate, endDate } = req.body;
+    const { projectId, title, description, assignee, priority, startDate, endDate, estimatedHours } = req.body;
 
     const project = await Project.findById(projectId);
     if (!project) return res.status(404).json({ message: "Project not found" });
-
     const newTask = new Task({
       title,
       description,
@@ -76,6 +75,7 @@ exports.createTask = async (req, res) => {
       priority,
       startDate,
       endDate,
+      estimatedHours,
       project: projectId
     });
 
@@ -90,9 +90,10 @@ exports.createTask = async (req, res) => {
   }
 };
 
+
 exports.updateTask = async (req, res) => {
   try {
-    const { title, description, status, assignees, priority, startDate, endDate, progress } = req.body;
+    const { title, description, status, assignee, priority, startDate, endDate, progress } = req.body;
 
     const task = await Task.findById(req.params.taskId);
     if (!task) return res.status(404).json({ message: "Task not found" });
@@ -108,7 +109,7 @@ exports.updateTask = async (req, res) => {
     task.title = title || task.title;
     task.description = description || task.description;
     task.status = status || task.status;
-    task.assignees = assignees || task.assignees;
+    task.assignees = assignee || task.assignees;
     task.priority = priority || task.priority;
     task.startDate = startDate || task.startDate;
     task.endDate = endDate || task.endDate;

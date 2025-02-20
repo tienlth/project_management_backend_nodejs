@@ -39,7 +39,12 @@ exports.getAllProjects = async (req, res) => {
 
 exports.getProjectById = async (req, res) => {
   try {
-    const project = await Project.findById(req.params.projectId).populate("tasks");
+    const project = await Project.findById(req.params.projectId).populate({
+      path: "tasks", 
+      populate: {
+        path: "assignees", 
+      },
+    });
     if (!project) return res.status(404).json({ message: "Project not found" });
 
     res.json(project);
