@@ -5,6 +5,7 @@ const upload = require("../middlewares/upload");
 const authMiddleware = require("../middlewares/authMiddleware");
 const authorize = require("../middlewares/roleMiddleware");
 
+router.get("/user-projects", projectController.getUserProjects);
 router.get("/overdue", projectController.getOverdueProjects);
 router.get("/overdue_sorted", projectController.getProjectsSortedByOverdueTime);
 router.get("/:projectId", projectController.getProjectById);

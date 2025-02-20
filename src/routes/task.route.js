@@ -5,6 +5,7 @@ const upload = require("../middlewares/upload");
 const authMiddleware = require("../middlewares/authMiddleware");
 const authorize = require("../middlewares/roleMiddleware");
 
+router.get("/user-tasks", taskController.getUserTasks);
 router.get("/overdue", taskController.getOverdueTasks);
 router.get("/overdue_sorted", taskController.getOverdueTasksSorted);
 router.get("/:taskId", taskController.getTaskById);
