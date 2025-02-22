@@ -5,7 +5,7 @@ const Project = require("./project.model");
 
 const QuotationSchema = new mongoose.Schema({
   project: { type: mongoose.Schema.Types.ObjectId, ref: "projects", required: true },
-  taskAdditionalCost: [
+  taskAdditionalCosts: [
     {
       taskId: {type: String},
       adittionalCosts: [
@@ -75,7 +75,7 @@ QuotationSchema.methods.calculateTotalCost = async function() {
 
   
   for (let task of project.tasks) {
-    const taskCost = await this.calculateTaskCost(task, this.taskAdditionalCost.find((t) => t.taskId == task._id) ?? {});
+    const taskCost = await this.calculateTaskCost(task, this.taskAdditionalCosts.find((t) => t.taskId == task._id) ?? {});
     task.cost = taskCost;
     totalCost += taskCost;
   }
