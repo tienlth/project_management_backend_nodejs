@@ -37,7 +37,7 @@ const QuotationSchema = new mongoose.Schema({
   totalCost: { type: Number, default: 0 }
 });
 
-QuotationSchema.methods.calculateTaskCost = async function(quotationTask, additionalCosts) {
+QuotationSchema.methods.calculateTaskCost = async function(quotationTask) {
   const task = await Task.findById(quotationTask).populate("assignees");
 
   if (!task) {
@@ -56,11 +56,6 @@ QuotationSchema.methods.calculateTaskCost = async function(quotationTask, additi
     }
   }
 
-  for (let additional of additionalCosts["adittionalCosts"] ?? []) {
-    taskCost += additional.cost;
-  }
-
-
   this.taskCosts.push({
     taskId: task._id,
     cost: taskCost
@@ -75,9 +70,15 @@ QuotationSchema.methods.calculateTotalCost = async function() {
 
   
   for (let task of project.tasks) {
-    const taskCost = await this.calculateTaskCost(task, this.taskAdditionalCosts.find((t) => t.taskId == task._id) ?? {});
+    const taskCost = await this.calculateTaskCost(task);
     task.cost = taskCost;
     totalCost += taskCost;
+
+    let taskAdditionalCost = this.taskAdditionalCosts.find((t) => t.taskId == task._id) ?? {}
+    let adittionalCosts = taskAdditionalCost["adittionalCosts"] ?? [];
+    for(let adittionalCost of adittionalCosts){
+      totalCost += adittionalCost["cost"]
+    }
   }
 
   for (let additional of this.additionalCosts) {
