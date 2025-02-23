@@ -93,7 +93,7 @@ exports.createTask = async (req, res) => {
 
 exports.updateTask = async (req, res) => {
   try {
-    const { title, description, status, assignee, priority, startDate, endDate, progress, estimatedHours } = req.body;
+    const { title, description, assignee, priority, startDate, endDate, progress, estimatedHours } = req.body;
 
     const task = await Task.findById(req.params.taskId).populate("project");
     if (!task) return res.status(404).json({ message: "Task not found" });
@@ -102,19 +102,25 @@ exports.updateTask = async (req, res) => {
       return res.status(400).json({ message: "Progress must be from 0 to 100" });
     }
 
-    if (status && !["Pending", "In Progress", "Completed"].includes(status)) {
-      return res.status(400).json({ message: "Invalid status" });
-    }
-
     task.title = title || task.title;
     task.description = description || task.description;
-    task.status = status || task.status;
     task.assignees = assignee || task.assignees;
     task.priority = priority || task.priority;
     task.startDate = startDate || task.startDate;
     task.endDate = endDate || task.endDate;
     task.estimatedHours = estimatedHours || task.estimatedHours;
-    if (progress !== undefined) task.progress = progress;
+
+    if (progress !== undefined) {
+      task.progress = progress;
+      if (progress == 100) {
+        task.status = "Completed";
+      } else if (progress > 0) {
+        task.status = "In Progress";
+      }
+      else{
+        task.status = "Pending";
+      }
+    }
 
     await task.save();
 

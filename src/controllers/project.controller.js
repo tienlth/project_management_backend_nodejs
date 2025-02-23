@@ -68,20 +68,24 @@ exports.createProject = async (req, res) => {
 
 exports.updateProject = async (req, res) => {
   try {
-    const { projectName, description, priority, startDate, endDate, status, progress } = req.body;
+    const { projectName, description, priority, startDate, endDate, progress } = req.body;
 
     const project = await Project.findById(req.params.projectId);
     if (!project) return res.status(404).json({ message: "Project not found" });
 
-    if (status && !["Planning", "In Progress", "Completed"].includes(status)) {
-      return res.status(400).json({ message: "Invalid Status" });
-    }
-
     if (progress !== undefined) {
       if (typeof progress !== "number" || progress < 0 || progress > 100) {
-        return res.status(400).json({ message: "Progress must from 0 to 100" });
+        return res.status(400).json({ message: "Progress must be from 0 to 100" });
       }
       project.progress = progress;
+
+      if (progress === 100) {
+        project.status = "Completed";
+      } else if (progress > 0) {
+        project.status = "In Progress";
+      } else {
+        project.status = "Planning";
+      }
     }
 
     project.projectName = projectName || project.projectName;
@@ -89,7 +93,6 @@ exports.updateProject = async (req, res) => {
     project.priority = priority || project.priority;
     project.startDate = startDate || project.startDate;
     project.endDate = endDate || project.endDate;
-    project.status = status || project.status;
 
     await project.save();
     res.json({ message: "Project updated successfully", project });
