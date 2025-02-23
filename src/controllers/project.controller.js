@@ -39,15 +39,36 @@ exports.getAllProjects = async (req, res) => {
 
 exports.getProjectById = async (req, res) => {
   try {
+    const token = req.headers.authorization?.split(" ")[1]; 
+    if (!token) return res.status(401).json({ message: "Unauthorized" });
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const userId = decoded.id; 
+    const userRole = decoded.role; 
+
     const project = await Project.findById(req.params.projectId).populate({
       path: "tasks", 
       populate: {
         path: "assignees", 
       },
+    }).populate({
+      path: "documents", 
+      populate: [
+        { path: "uploadedBy"}, 
+        { path: "sharedWith"},
+      ]
     });
+
     if (!project) return res.status(404).json({ message: "Project not found" });
 
-    res.json(project);
+    const filteredDocuments = userRole === "admin" 
+      ? project.documents 
+      : project.documents.filter(doc => 
+          doc.sharedWith.map(sw => sw["_id"].toString()).includes(userId) || doc.uploadedBy === userId
+        );
+
+    res.json({ ...project.toObject(), documents: filteredDocuments });
+
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -68,7 +89,7 @@ exports.createProject = async (req, res) => {
 
 exports.updateProject = async (req, res) => {
   try {
-    const { projectName, description, priority, startDate, endDate, progress } = req.body;
+    const { projectName, description, priority, startDate, endDate, progress} = req.body;
 
     const project = await Project.findById(req.params.projectId);
     if (!project) return res.status(404).json({ message: "Project not found" });
@@ -187,17 +208,21 @@ exports.uploadProjectDocument = async (req, res) => {
     });
 
     await project.save();
-    res.status(200).json({ message: "File uploaded", document: req.file.path });
+    res.status(200).json({status: "success", message: "File uploaded", document: req.file.path });
   } catch (error) {
     console.log(error.toString())
-    res.status(500).json({ message: "Upload failed", error });
+    res.status(500).json({status: "failed", message: "Upload failed", error });
   }
 };
 
 exports.shareProjectDocument = async (req, res) => {
   try {
     const { projectId, documentId } = req.params;
-    const { userId } = req.body;
+    const { userIds } = req.body; 
+
+    if (!Array.isArray(userIds) || userIds.length === 0) {
+      return res.status(400).json({ message: "Invalid userIds" });
+    }
 
     const project = await Project.findById(projectId);
     if (!project) return res.status(404).json({ message: "Project not found" });
@@ -205,14 +230,16 @@ exports.shareProjectDocument = async (req, res) => {
     const document = project.documents.id(documentId);
     if (!document) return res.status(404).json({ message: "Document not found" });
 
-    if (!document.sharedWith.includes(userId)) {
-      document.sharedWith.push(userId);
-      await project.save();
-    }
+    document.sharedWith = userIds;
+    await project.save();
 
-    res.status(200).json({ message: "Document shared successfully" });
+    res.status(200).json({ 
+      message: "Document shared successfully", 
+      sharedWith: document.sharedWith 
+    });
+
   } catch (error) {
-    res.status(500).json({ message: "Share failed", error });
+    res.status(500).json({ message: "Share failed", error: error.message });
   }
 };
 

@@ -1,3 +1,4 @@
+require("dotenv").config();
 const express = require("express");
 const http = require("http");
 const mongoose = require("mongoose");
@@ -5,7 +6,6 @@ const cors = require("cors");
 const { initSocket } = require("./config/socket");
 const routes = require("./routes");
 const { startReminderCronJob } = require("./config/cronjob");
-require("dotenv").config();
 
 const app = express();
 const server = http.createServer(app);
