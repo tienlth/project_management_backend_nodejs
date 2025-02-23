@@ -5,41 +5,41 @@ const ContractSchema = new mongoose.Schema({
   quotation: { type: mongoose.Schema.Types.ObjectId, ref: "quotations", required: true },
   isDraft: { type: Boolean, default: true },
   partyA: {
-    company: { type: String, required: true },
-    address: { type: String, required: true },
-    taxCode: { type: String, required: true },
-    representative: { type: String, required: true },
-    position: { type: String, required: true },
-    phone: { type: String, required: true },
-    email: { type: String, required: true }
+    company: { type: String },
+    address: { type: String },
+    taxCode: { type: String },
+    representative: { type: String },
+    position: { type: String },
+    phone: { type: String },
+    email: { type: String }
   },
   partyB: {
-    company: { type: String, required: true },
-    address: { type: String, required: true },
-    taxCode: { type: String, required: true },
-    representative: { type: String, required: true },
-    position: { type: String, required: true },
-    phone: { type: String, required: true },
-    email: { type: String, required: true }
+    company: { type: String },
+    address: { type: String },
+    taxCode: { type: String },
+    representative: { type: String },
+    position: { type: String },
+    phone: { type: String },
+    email: { type: String }
   },
   paymentTerms: {
     method: { type: String, default: "Bank Transfer" },
     installments: [
-      { stage: String, percentage: Number, amount: Number }
+      { stage: String, amount: Number }
     ],
     bankDetails: {
-      accountName: { type: String, required: true },
-      accountNumber: { type: String, required: true },
-      bankName: { type: String, required: true },
-      branch: { type: String, required: true }
+      accountName: { type: String },
+      accountNumber: { type: String },
+      bankName: { type: String },
+      branch: { type: String }
     }
   },
   rightsAndObligations: {
     partyA: {
-      responsibilities: [{ type: String, required: true }]
+      responsibilities: { type: String }
     },
     partyB: {
-      responsibilities: [{ type: String, required: true }]
+      responsibilities: { type: String }
     }
   },
   warrantyAndSupport: {

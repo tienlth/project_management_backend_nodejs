@@ -24,7 +24,7 @@ const getContractById = async (req, res) => {
       populate: {
         path: "tasks", 
       },
-    });;
+    });
 
     if (!contract) {
       return res.status(404).json({ success: false, message: "Contract not found" });
@@ -50,18 +50,49 @@ const previewContract = async (req, res) => {
       return res.status(404).json({ message: "Quotation not found" });
     }
 
-    const previewContract = new Contract({
-      project: await Project.findById(projectId),
-      quotation: await Quotation.findById(quotation._id),
-      isDraft: true,
-      partyA: {},
-      partyB: {},
-      paymentTerms: {},
-      rightsAndObligations: {},
-      warrantyAndSupport: "",
-      terminationClause: "",
-      contractEffectiveness: ""
-    });
+    const previewContract = new Contract(
+      {
+        project: await Project.findById(projectId).populate("tasks"),
+        quotation: await Quotation.findById(quotation._id),
+        isDraft: true,
+        partyA: {
+          company: "",
+          address: "",
+          taxCode: "",
+          representative: "",
+          position: "",
+          phone: "",
+          email: ""
+        },
+        partyB: {
+          company: "",
+          address: "",
+          taxCode: "",
+          representative: "",
+          position: "",
+          phone: "",
+          email: ""
+        },
+        paymentTerms: {
+          method: "",
+          installments: [],
+          bankDetails: {
+            accountName: "",
+            accountNumber: "",
+            bankName: "",
+            branch: ""
+          }
+        },
+        rightsAndObligations: {
+          partyA: {
+            responsibilities: ""
+          },
+          partyB: {
+            responsibilities: ""
+          }
+        }
+      }
+    );
 
     res.status(200).json({
       message: "Preview contract successfully",
@@ -83,33 +114,47 @@ const saveContract = async (req, res) => {
       return res.status(404).json({ message: "Project not found" });
     }
 
-    const quotation = await Quotation.findOne({ project: projectId });
+    let quotation = await Quotation.findOne({ project: projectId });
     if (!quotation) {
       return res.status(404).json({ message: "Quotation not found" });
     }
 
-    const newContract = new Contract({
-      project: projectId,
-      quotation: quotation._id,
-      isDraft: isDraft ?? true,
-      partyA,
-      partyB,
-      paymentTerms,
-      rightsAndObligations,
-      warrantyAndSupport,
-      terminationClause,
-      contractEffectiveness
-    });
+    let contract = await Contract.findOne({ project: projectId });
 
-    await newContract.save();
+    if (contract) {
+      contract.partyA = partyA;
+      contract.partyB = partyB;
+      contract.paymentTerms = paymentTerms;
+      contract.rightsAndObligations = rightsAndObligations;
+      contract.warrantyAndSupport = warrantyAndSupport;
+      contract.terminationClause = terminationClause;
+      contract.contractEffectiveness = contractEffectiveness;
+      contract.isDraft = isDraft ?? contract.isDraft;
+    } else {
+      contract = new Contract({
+        project: projectId,
+        quotation: quotation._id,
+        isDraft: isDraft ?? true,
+        partyA,
+        partyB,
+        paymentTerms,
+        rightsAndObligations,
+        warrantyAndSupport,
+        terminationClause,
+        contractEffectiveness
+      });
+    }
 
-    res.status(201).json({
-      message: "Contract created successfully",
-      contract: newContract
+    await contract.save();
+
+    res.status(200).json({
+      status: "success",
+      message: contract.isNew ? "Contract created successfully" : "Contract updated successfully",
+      contract
     });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: "Internal server error" });
+    res.status(500).json({status: "failed", message: "Internal server error" });
   }
 };
 
