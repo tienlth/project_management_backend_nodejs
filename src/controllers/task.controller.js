@@ -121,11 +121,16 @@ exports.updateTask = async (req, res) => {
     const project = await Project.findById(task.project);
     if (project) {
       let updatedTeam = [...project.team];
-      
       assignee.forEach(userId => {
-        if (!project.team.includes(userId)) {
+        if (!updatedTeam.includes(userId)) {
           updatedTeam.push(userId);
         }
+      });
+
+      const tasksInProject = await Task.find({ project: project._id });
+
+      updatedTeam = updatedTeam.filter(userId => {
+        return tasksInProject.some(task => task.assignees.includes(userId));
       });
 
       project.team = updatedTeam;
@@ -187,8 +192,14 @@ exports.getOverdueTasksSorted = async (req, res) => {
       }
     ]);
 
+    for (let task of overdueTasks) {
+      const project = await Project.findById(task.project).lean();
+      task.project = project || null;
+    }
+
     res.status(200).json({ success: true, overdueTasks });
   } catch (error) {
+    console.log(error)
     res.status(500).json({ success: false, message: "Lỗi khi lấy công việc trễ hạn", error });
   }
 };

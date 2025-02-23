@@ -7,7 +7,7 @@ const authorize = require("../middlewares/roleMiddleware");
 
 router.get("/user-projects", projectController.getUserProjects);
 router.get("/overdue", projectController.getOverdueProjects);
-router.get("/overdue_sorted", projectController.getProjectsSortedByOverdueTime);
+router.get("/overdue-sorted", projectController.getProjectsSortedByOverdueTime);
 router.get("/:projectId", projectController.getProjectById);
 router.get("/", projectController.getAllProjects);
 

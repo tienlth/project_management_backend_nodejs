@@ -7,7 +7,7 @@ const authorize = require("../middlewares/roleMiddleware");
 
 router.get("/user-tasks", taskController.getUserTasks);
 router.get("/overdue", taskController.getOverdueTasks);
-router.get("/overdue_sorted", taskController.getOverdueTasksSorted);
+router.get("/overdue-sorted", taskController.getOverdueTasksSorted);
 router.get("/:taskId", taskController.getTaskById);
 router.get("/", taskController.getAllTasks);
 

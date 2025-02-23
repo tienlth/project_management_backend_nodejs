@@ -126,23 +126,25 @@ exports.getProjectsSortedByOverdueTime = async (req, res) => {
   try {
     const projects = await Project.find().populate("tasks");
 
-    const projectsWithOverdueTime = projects.map((project) => {
-      let totalOverdueTime = 0;
-      const overdueTasks = project.tasks.filter(
-        (task) => task.status !== "Completed" && task.endDate < new Date()
-      );
+    const projectsWithOverdueTime = projects
+      .map((project) => {
+        let totalOverdueTime = 0;
+        const overdueTasks = project.tasks.filter(
+          (task) => task.status !== "Completed" && task.endDate < new Date()
+        );
 
-      overdueTasks.forEach((task) => {
-        const overdueTime = new Date() - new Date(task.endDate); 
-        totalOverdueTime += overdueTime;
-      });
+        overdueTasks.forEach((task) => {
+          const overdueTime = new Date() - new Date(task.endDate);
+          totalOverdueTime += overdueTime;
+        });
 
-      return {
-        ...project.toObject(),
-        totalOverdueTime, 
-        overdueTasks,
-      };
-    });
+        return {
+          ...project.toObject(),
+          totalOverdueTime,
+          overdueTasks,
+        };
+      })
+      .filter((project) => project.totalOverdueTime > 0);
 
     projectsWithOverdueTime.sort((a, b) => b.totalOverdueTime - a.totalOverdueTime);
 
@@ -151,6 +153,7 @@ exports.getProjectsSortedByOverdueTime = async (req, res) => {
     res.status(500).json({ success: false, message: "Get data error", error });
   }
 };
+
 
 exports.uploadProjectDocument = async (req, res) => {
   try {
