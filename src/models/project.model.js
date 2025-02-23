@@ -4,7 +4,7 @@ const ProjectSchema = new mongoose.Schema({
   projectName: { type: String, required: true },
   description: { type: String },
   priority: { type: String, enum: ["Low", "Medium", "High"], default: "Medium" },
-  team: [{ userId: { type: mongoose.Schema.Types.ObjectId, ref: "users" }, role: { type: String } }],
+  team: [{ type: mongoose.Schema.Types.ObjectId, ref: "users" }],
   tasks: [{ type: mongoose.Schema.Types.ObjectId, ref: "tasks" }],
   startDate: { type: Date },
   endDate: { type: Date },

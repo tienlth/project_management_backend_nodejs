@@ -19,7 +19,7 @@ exports.getUserProjects = async (req, res) => {
     if (user.role === "admin") {
       projects = await Project.find().populate("tasks");
     } else {
-      projects = await Project.find({ "team.userId": userId }).populate("tasks");
+      projects = await Project.find({ team: userId }).populate("tasks");
     }
 
     res.status(200).json({ success: true, projects });

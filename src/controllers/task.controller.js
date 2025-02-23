@@ -20,9 +20,9 @@ exports.getUserTasks = async (req, res) => {
     if (user.role === "admin") {
       tasks = await Task.find().populate("project", "projectName").populate("assignees", "name email");
     } else {
-      tasks = await Task.find({ assignee: userId }) 
+      tasks = await Task.find({ assignees: userId }) 
         .populate("project", "projectName")
-        .populate("assignee", "name email"); 
+        .populate("assignees", "name email"); 
         
       // const userProjects = await Project.find({ "team.userId": userId }).select("_id");
       // const projectIds = userProjects.map(p => p._id);
@@ -93,13 +93,13 @@ exports.createTask = async (req, res) => {
 
 exports.updateTask = async (req, res) => {
   try {
-    const { title, description, status, assignee, priority, startDate, endDate, progress } = req.body;
+    const { title, description, status, assignee, priority, startDate, endDate, progress, estimatedHours } = req.body;
 
-    const task = await Task.findById(req.params.taskId);
+    const task = await Task.findById(req.params.taskId).populate("project");
     if (!task) return res.status(404).json({ message: "Task not found" });
 
     if (progress !== undefined && (progress < 0 || progress > 100)) {
-      return res.status(400).json({ message: "Progress must from 0 to 100" });
+      return res.status(400).json({ message: "Progress must be from 0 to 100" });
     }
 
     if (status && !["Pending", "In Progress", "Completed"].includes(status)) {
@@ -113,9 +113,25 @@ exports.updateTask = async (req, res) => {
     task.priority = priority || task.priority;
     task.startDate = startDate || task.startDate;
     task.endDate = endDate || task.endDate;
+    task.estimatedHours = estimatedHours || task.estimatedHours;
     if (progress !== undefined) task.progress = progress;
 
     await task.save();
+
+    const project = await Project.findById(task.project);
+    if (project) {
+      let updatedTeam = [...project.team];
+      
+      assignee.forEach(userId => {
+        if (!project.team.includes(userId)) {
+          updatedTeam.push(userId);
+        }
+      });
+
+      project.team = updatedTeam;
+      await project.save();
+    }
+
     res.json({ message: "Task updated successfully", task });
   } catch (err) {
     res.status(500).json({ message: err.message });
